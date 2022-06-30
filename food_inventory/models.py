@@ -10,9 +10,21 @@ from werkzeug.security import generate_password_hash, check_password_hash
 #Import for Secrets Module (Given by Python)
 import secrets
 
-db = SQLAlchemy()
+# Imports flask login
+from flask_login import UserMixin, LoginManager
 
-class User(db.Model):
+# Import for flask-marshmallow
+from flask_marshmallow import Marshmallow
+
+db = SQLAlchemy()
+login_manager = LoginManager()
+ma = Marshmallow()
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(user_id)
+
+class User(db.Model, UserMixin):
     __tablename__ = 'user'
     id = db.Column(db.String, primary_key = True)
     first_name = db.Column(db.String(150), nullable = True, default = '')
@@ -22,6 +34,7 @@ class User(db.Model):
     g_auth_verify = db.Column(db.Boolean, default = False) 
     token = db.Column(db.String, default = '', unique = True)
     date_creat = db.Column(db.DateTime, nullable = False, default = datetime.utcnow)
+    recipe = db.relationship('Recipe', backref = 'owner', lazy = True)
 
     def __init__(self, email, first_name = '', last_name = '', id = '', password = '', token = '', g_auth_verify = False):
         self.id = self.set_id()
@@ -45,8 +58,41 @@ class User(db.Model):
     def __repr__(self):
         return f"User {self.email} has been added to the database."
 
-# users = db.Table('users', target_metadata,
-#     db.Column('id', db.Integer, primary_key=True),
-#     db.Column('name', db.String(50), unique=True),
-#     db.Column('email', db.String(120), unique=True)
-# ) WHAT IS HAPPENING
+class Recipe(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.String(150))
+    description = db.Column(db.String(200), nullable = True)
+    price = db.Column(db.Numeric(precision=10, scale=2))
+    veggie = db.Column(db.String(150), nullable = True)
+    cooking_time = db.Column(db.String(100))
+    allergens = db.Column(db.String(100), nullable = True)
+    cooking_tools = db.Column(db.String(100))
+    serving_size = db.Column(db.Numeric(precision=10, scale=0))
+    user_token = db.Column(db.String, db.ForeignKey('user.token'), nullable = False)
+
+    def __init__(self, name, description, price, veggie, cooking_time, allergens, cooking_tools, serving_size, user_token, id=''):
+        self.id = self.set_id()
+        self.name = name
+        self.description = description
+        self.price = price
+        self.veggie = veggie
+        self.cooking_time = cooking_time
+        self.allergens = allergens
+        self.cooking_tools = cooking_tools
+        self.serving_size = serving_size
+        self.user_token = user_token
+
+    def __repr__(self):
+        return f"The following Recipe has been added: {self.name}"
+
+    def set_id(self):
+        return secrets.token_urlsafe()
+
+
+# Creation of API Schema via the Marshmallow Object
+class RecipeSchema(ma.Schema):
+    class Meta:
+        fields = ['id', 'name', 'description', 'price', 'camera_quality', 'flight_time', 'max_speed', 'dimensions', 'weight', 'cost_of_production', 'series']
+
+recipe_schema = RecipeSchema()
+recipes_schema = RecipeSchema(many = True)

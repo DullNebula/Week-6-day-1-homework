@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir,'.env'))
 
 # Gives access to the project in any OS we find ourselves in
 # Allows outside files/folders to be added to the project
